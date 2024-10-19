@@ -1,3 +1,5 @@
+use crate::{InnerCamera, InnerDevice};
+
 use super::mf::*;
 
 use std::{sync::mpsc::*, time::Duration};
@@ -24,9 +26,12 @@ pub struct FrameData<'a> {
     data: &'a [u8],
 }
 
-impl Camera {
-    pub fn new_default_device() -> Self {
-        co_initialize_multithreaded();
+impl InnerCamera for Camera {
+    type Device = Device;
+    type Frame = Frame;
+
+    fn new_from_device(device: Self::Device) -> Self {
+        *CO_INITIALIZED_MULTITHREADED;
         media_foundation_startup().expect("media_foundation_startup");
 
         let engine = new_capture_engine().unwrap();
@@ -34,9 +39,6 @@ impl Camera {
         let (sample_tx, sample_rx) = channel::<Option<IMFSample>>();
         let event_cb = CaptureEventCallback { event_tx }.into();
         let sample_cb = CaptureSampleCallback { sample_tx }.into();
-
-        let devices = Device::enum_devices();
-        let Some(device) = devices.first().cloned() else { todo!() };
 
         init_capture_engine(&engine, Some(&device.source), &event_cb).unwrap();
 
@@ -46,24 +48,28 @@ impl Camera {
         camera
     }
 
-    pub fn start(&self) {
+    fn new_default_device() -> Self {
+        let devices = Device::list_all_devices();
+        let Some(device) = devices.into_iter().next() else { todo!() };
+        Self::new_from_device(device)
+    }
+
+    fn start(&self) {
         unsafe { self.engine.StartPreview().unwrap() }
     }
 
-    pub fn stop(&self) {
+    fn stop(&self) {
         capture_engine_stop_preview(&self.engine).unwrap();
     }
 
-    pub fn wait_for_frame(&self) -> Option<Frame> {
+    fn wait_for_frame(&self) -> Option<Self::Frame> {
         self.sample_rx
             // TODO sometimes running two engines on the same camera breaks frame delivery, so wait not too long
             .recv_timeout(Duration::from_secs(3))
             .ok()
             .flatten()
             .and_then(|sample| {
-                let Some(mt) = capture_engine_sink_get_media_type(&self.engine).ok() else {
-                    return None;
-                };
+                let mt = capture_engine_sink_get_media_type(&self.engine).ok()?;
                 let width = mt.frame_width();
                 let height = mt.frame_height();
                 sample_to_locked_buffer(&sample, width, height).ok()
@@ -71,7 +77,7 @@ impl Camera {
             .map(|buffer: LockedBuffer| Frame { buffer })
     }
 
-    pub fn change_device(&mut self) {
+    fn change_device(&mut self) {
         let devices: Vec<Device> = enum_device_sources().into_iter().map(Device::new).collect();
         let Some(index) = devices.iter().position(|d| d.id() == self.device.id()) else { return };
         let new_index = (index + 1) % devices.len();
@@ -81,18 +87,7 @@ impl Camera {
         }
         let new_device = devices[new_index].clone();
 
-        let engine = new_capture_engine().unwrap();
-        let (event_tx, event_rx) = channel::<CaptureEngineEvent>();
-        let (sample_tx, sample_rx) = channel::<Option<IMFSample>>();
-        let event_cb = CaptureEventCallback { event_tx }.into();
-        let sample_cb = CaptureSampleCallback { sample_tx }.into();
-
-        init_capture_engine(&engine, Some(&new_device.source), &event_cb).unwrap();
-
-        *self = Camera { engine, device: new_device, event_rx, sample_rx, event_cb, sample_cb };
-        self.wait_for_event(CaptureEngineEvent::Initialized);
-        self.prepare_source_sink();
-        self.start(); // TODO watch out about playing state
+        *self = Self::new_from_device(new_device);
     }
 }
 

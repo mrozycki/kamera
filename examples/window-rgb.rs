@@ -10,6 +10,12 @@ use winit::{
 use kamera::*;
 
 fn main() {
+    let devices = Device::list_all_devices();
+    println!("Available devices");
+    for (i, device) in devices.iter().enumerate() {
+        println!("#{}: {}", i, device.name());
+    }
+
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new().build(&event_loop).unwrap();
     let context = unsafe { softbuffer::Context::new(&window) }.unwrap();

@@ -1,12 +1,19 @@
 use std::{ffi::OsString, mem::MaybeUninit, sync::mpsc::*};
 
+use lazy_static::lazy_static;
 use windows::{
     core::*,
     Win32::{Media::MediaFoundation::*, System::Com::*},
 };
 
+use crate::InnerDevice;
+
 use super::attributes::{mf_create_attributes, mf_get_string};
 use super::media_type::MediaType;
+
+lazy_static! {
+    pub static ref CO_INITIALIZED_MULTITHREADED: () = co_initialize_multithreaded();
+}
 
 #[derive(Clone, Debug)]
 pub struct Device {
@@ -16,7 +23,6 @@ pub struct Device {
 
 impl Device {
     pub(crate) fn new(activate: IMFActivate) -> Self {
-        co_initialize_multithreaded();
         let source = unsafe { activate.ActivateObject().unwrap() };
         Self { activate, source }
     }
@@ -42,12 +48,6 @@ impl std::fmt::Display for Device {
 
 #[allow(unused)]
 impl Device {
-    pub fn name(&self) -> String {
-        mf_get_string(&self.activate, &MF_DEVSOURCE_ATTRIBUTE_FRIENDLY_NAME)
-            .map(|s| s.to_string_lossy().to_string())
-            .unwrap_or_else(|_| "NO NAME".into())
-    }
-
     pub fn id(&self) -> OsString {
         let symlink = &MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_SYMBOLIC_LINK;
         mf_get_string(&self.activate, symlink).unwrap_or_else(|_| "NO ID".into())
@@ -60,8 +60,17 @@ impl Device {
     pub fn query_media_types_with_best_fps(&self) -> Vec<MediaType> {
         MediaType::filter_resolutions_with_max_fps(&self.query_media_types())
     }
+}
 
-    pub fn enum_devices() -> Vec<Device> {
+impl InnerDevice for Device {
+    fn name(&self) -> String {
+        mf_get_string(&self.activate, &MF_DEVSOURCE_ATTRIBUTE_FRIENDLY_NAME)
+            .map(|s| s.to_string_lossy().to_string())
+            .unwrap_or_else(|_| "NO NAME".into())
+    }
+
+    fn list_all_devices() -> Vec<Device> {
+        *CO_INITIALIZED_MULTITHREADED;
         enum_device_sources().into_iter().map(Device::new).collect()
     }
 }

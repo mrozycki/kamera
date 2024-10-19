@@ -7,6 +7,23 @@ use super::win_mf as backend;
 #[cfg(target_os = "linux")]
 use super::linux_v4l2 as backend;
 
+pub struct Device {
+    inner: backend::Device,
+}
+
+impl Device {
+    pub fn list_all_devices() -> Vec<Self> {
+        backend::Device::list_all_devices()
+            .into_iter()
+            .map(|device| Device { inner: device })
+            .collect()
+    }
+
+    pub fn name(&self) -> String {
+        self.inner.name()
+    }
+}
+
 #[derive(Debug)]
 pub struct Camera {
     inner: backend::Camera,
@@ -24,6 +41,10 @@ pub struct FrameData<'a> {
 impl Camera {
     pub fn new_default_device() -> Self {
         Self { inner: backend::Camera::new_default_device() }
+    }
+
+    pub fn new_from_device(device: Device) -> Self {
+        Self { inner: backend::Camera::new_from_device(device.inner) }
     }
 
     pub fn start(&self) {
@@ -64,11 +85,18 @@ impl<'a> FrameData<'a> {
 }
 
 pub(crate) trait InnerCamera: std::fmt::Debug {
+    type Device;
     type Frame;
 
+    fn new_from_device(device: Self::Device) -> Self;
     fn new_default_device() -> Self;
     fn start(&self);
     fn stop(&self);
     fn wait_for_frame(&self) -> Option<Self::Frame>;
     fn change_device(&mut self);
+}
+
+pub(crate) trait InnerDevice: Sized {
+    fn list_all_devices() -> Vec<Self>;
+    fn name(&self) -> String;
 }
