@@ -1,13 +1,15 @@
+use crate::InnerDevice;
+
 use super::mf::*;
 
 #[test]
 fn device_enum_devices() {
     co_mta_usage();
-    assert!(!Device::enum_devices().is_empty());
+    assert!(!Device::list_all_devices().is_empty());
 }
 
 fn first_device() -> Device {
-    Device::enum_devices()[0].clone()
+    Device::list_all_devices()[0].clone()
 }
 
 #[test]

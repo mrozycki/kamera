@@ -15,6 +15,12 @@ fn main() {
     let context = unsafe { softbuffer::Context::new(&window) }.unwrap();
     let mut surface = unsafe { softbuffer::Surface::new(&context, &window) }.unwrap();
 
+    let devices = Device::list_all_devices();
+    println!("Available devices");
+    for (i, device) in devices.iter().enumerate() {
+        println!("#{}: {}", i, device.name());
+    }
+
     let mut camera = Camera::new_default_device();
     camera.start();
 
