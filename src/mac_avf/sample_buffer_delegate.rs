@@ -92,8 +92,8 @@ impl Slot {
         let mut _guard = self.state.lock().unwrap();
         log::debug!("waiting for sample");
         _guard = self.condvar.wait(_guard).unwrap();
-        log::debug!("sample arrived");
         let ptr = self.sample.load(std::sync::atomic::Ordering::Relaxed);
+        log::debug!("sample arrived: {}", ptr as usize);
         if ptr.is_null() {
             None
         } else {
@@ -108,6 +108,7 @@ impl Slot {
         } else {
             sample
         };
+        log::debug!("Setting sample: {}", sample as usize);
         let old_sample = self.sample.swap(sample, std::sync::atomic::Ordering::Relaxed);
         if !old_sample.is_null() {
             unsafe { super::CFRelease(old_sample.cast()) };

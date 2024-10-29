@@ -173,8 +173,20 @@ impl<'a> Pixels<'a> {
             plane_sizes += stride * height;
         }
 
+        log::debug!(
+            "From raw parts(plane_address={}, plane_sizes={})",
+            plane_address as usize,
+            plane_sizes
+        );
         let data = unsafe { std::slice::from_raw_parts(plane_address, plane_sizes) };
+        log::debug!("Align to(data={})", data.as_ptr() as usize);
         let (a, u32, b) = unsafe { data.align_to() };
+        log::debug!(
+            "a={}, u32={}, b={}",
+            a.as_ptr() as usize,
+            u32.as_ptr() as usize,
+            b.as_ptr() as usize
+        );
         debug_assert!(a.is_empty() && b.is_empty());
         Self { ibuf, data, u32, width, height }
     }
