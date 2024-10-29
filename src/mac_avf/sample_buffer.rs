@@ -161,6 +161,7 @@ impl<'a> Pixels<'a> {
         let mut plane_sizes = 0;
 
         // println!("pixels {:?}", (_address, stride, width, height, is_planar, plane_count, _data_size, fourcc_to_string(_fourcc)));
+        log::debug!("is planar: {is_planar}");
         if is_planar {
             for index in 0..plane_count {
                 let _plane_address = unsafe { CVPixelBufferGetBaseAddressOfPlane(ibuf, index) };
