@@ -35,6 +35,7 @@ declare_class!(
             sample_buffer: CMSampleBufferRef,
             _connection: *const c_void,
         ) {
+            log::debug!("on_output_sample_buffer");
             self.set_slot(sample_buffer);
         }
 
@@ -42,11 +43,12 @@ declare_class!(
         unsafe fn on_drop_sample_buffer(
             &mut self,
             _capture_output: *const c_void,
-            sample_buffer: CMSampleBufferRef,
+            _sample_buffer: CMSampleBufferRef,
             _connection: *const c_void,
         ) {
+            log::debug!("on_drop_sample_buffer");
             println!("DROP SAMPLE BUFFER UNIMPLEMENTED");
-            self.set_slot(sample_buffer);
+            // self.set_slot(sample_buffer);
         }
     }
 
@@ -88,7 +90,9 @@ impl Slot {
 
     pub fn wait_for_sample(&self) -> Option<SampleBuffer> {
         let mut _guard = self.state.lock().unwrap();
+        log::debug!("waiting for sample");
         _guard = self.condvar.wait(_guard).unwrap();
+        log::debug!("sample arrived");
         let ptr = self.sample.load(std::sync::atomic::Ordering::Relaxed);
         if ptr.is_null() {
             None
