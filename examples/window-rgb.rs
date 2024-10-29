@@ -10,6 +10,7 @@ use winit::{
 use kamera::*;
 
 fn main() {
+    env_logger::init();
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new().build(&event_loop).unwrap();
     let context = unsafe { softbuffer::Context::new(&window) }.unwrap();

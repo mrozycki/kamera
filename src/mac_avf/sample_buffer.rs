@@ -148,7 +148,9 @@ pub struct Pixels<'a> {
 impl<'a> Pixels<'a> {
     fn new(sample: &'a SampleBuffer) -> Self {
         let ibuf = unsafe { CMSampleBufferGetImageBuffer(sample.inner) };
-        debug_assert!(0 == unsafe { CVPixelBufferLockBaseAddress(ibuf, 1) });
+        log::debug!("sample.inner={}, ibuf: {}", sample.inner as usize, ibuf as usize);
+        let lock_result = unsafe { CVPixelBufferLockBaseAddress(ibuf, 1) };
+        debug_assert!(0 == lock_result);
         let _address = unsafe { CVPixelBufferGetBaseAddress(ibuf) };
         let stride = unsafe { CVPixelBufferGetBytesPerRow(ibuf) };
         let width = unsafe { CVPixelBufferGetWidth(ibuf) };
@@ -157,7 +159,7 @@ impl<'a> Pixels<'a> {
         let plane_count = unsafe { CVPixelBufferGetPlaneCount(ibuf) };
         let _data_size = unsafe { CVPixelBufferGetDataSize(ibuf) };
         let _fourcc = unsafe { CVPixelBufferGetPixelFormatType(ibuf) };
-        let plane_address = unsafe { CVPixelBufferGetBaseAddressOfPlane(ibuf, 0) };
+        let plane_address = unsafe { CVPixelBufferGetBaseAddress(ibuf) };
         let mut plane_sizes = 0;
 
         // println!("pixels {:?}", (_address, stride, width, height, is_planar, plane_count, _data_size, fourcc_to_string(_fourcc)));
@@ -195,6 +197,7 @@ impl<'a> Pixels<'a> {
 
 impl Drop for Pixels<'_> {
     fn drop(&mut self) {
-        debug_assert!(0 == unsafe { CVPixelBufferUnlockBaseAddress(self.ibuf, 1) });
+        let result = unsafe { CVPixelBufferUnlockBaseAddress(self.ibuf, 1) };
+        debug_assert!(0 == result);
     }
 }
