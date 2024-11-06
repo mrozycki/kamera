@@ -1,9 +1,9 @@
 use super::*;
+use crate::CameraDevice;
 use objc2::rc::Id;
 use std::sync::Arc;
-use crate::CameraDevice;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Camera {
     device: Id<AVCaptureDevice>,
     input: Id<AVCaptureDeviceInput>,
@@ -51,7 +51,10 @@ impl Camera {
     }
 
     pub fn device(&self) -> CameraDevice {
-        return CameraDevice { id: self.device.unique_id().to_string(), name: self.device.localized_name().to_string() }
+        CameraDevice {
+            id: self.device.unique_id().to_string(),
+            name: self.device.localized_name().to_string(),
+        }
     }
 
     pub fn set_device(&mut self, device: &CameraDevice) -> bool {
@@ -67,15 +70,19 @@ impl Camera {
             self.device = new_device.retain();
             self.input = new_input;
             self.session.add_input(&self.input);
-            return true;
+            true
+        } else {
+            false
         }
-        return false;
     }
 
     pub fn device_list() -> Vec<CameraDevice> {
         AVCaptureDevice::all_video_devices()
             .iter()
-            .map(|device| CameraDevice { id: device.unique_id().to_string(), name: device.localized_name().to_string() })
+            .map(|device| CameraDevice {
+                id: device.unique_id().to_string(),
+                name: device.localized_name().to_string(),
+            })
             .collect()
     }
 }

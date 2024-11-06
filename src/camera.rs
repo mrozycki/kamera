@@ -7,7 +7,7 @@ use super::win_mf as backend;
 #[cfg(target_os = "linux")]
 use super::linux_v4l2 as backend;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Camera {
     inner: backend::Camera,
 }
@@ -30,6 +30,12 @@ pub struct CameraDevice {
 impl Camera {
     pub fn new_default_device() -> Self {
         Self { inner: backend::Camera::new_default_device() }
+    }
+
+    pub fn new_from_device(device: &CameraDevice) -> Self {
+        let mut s = Self::new_default_device();
+        s.set_device(device);
+        s
     }
 
     pub fn start(&self) {
