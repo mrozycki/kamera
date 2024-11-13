@@ -4,7 +4,7 @@ use super::mac_avf as backend;
 #[cfg(target_os = "windows")]
 use super::win_mf as backend;
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "android"))]
 use super::linux_v4l2 as backend;
 
 pub struct Device {

@@ -31,7 +31,7 @@ windows = { version = "0.43", features = [
     "implement",
 ] }
 
-[target.'cfg(target_os="linux")'.dependencies]
+[target.'cfg(any(target_os="linux", target_os="android"))'.dependencies]
 v4l = "0.14.0"
 
 [dev-dependencies]
